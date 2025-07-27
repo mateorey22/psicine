@@ -3,366 +3,511 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aqua-Control Dashboard</title>
+    <title>Tableau de Bord Solaire IA | Piscine & Météo</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Utilisation de versions UMD spécifiques et plus récentes pour une meilleure compatibilité navigateur -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a; /* Fond bleu nuit */
+            font-family: 'Poppins', sans-serif;
+            color: #ffffff;
+            overflow-x: hidden;
+            transition: background 1s ease;
         }
-        /* Animation de vagues en arrière-plan pour un effet aquatique */
-        .wave-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: -1;
+        .background-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; transition: opacity 1s ease;
         }
-        .wave {
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="none"><path d="M0 350V1080H1920V350C1720 200 1520 200 1320 350C1120 500 920 500 720 350C520 200 320 200 120 350Z" fill="%230099ff" fill-opacity="0.15"></path></svg>') repeat-x;
-            position: absolute;
-            bottom: -20px;
-            width: 6400px;
-            height: 198px;
-            animation: wave 15s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
-            transform: translate3d(0, 0, 0);
+        .day-theme {
+            background: linear-gradient(45deg, #00c6ff, #0072ff, #23a6d5, #23d5ab);
+            background-size: 400% 400%; animation: gradientWave 15s ease infinite;
         }
-        .wave:nth-of-type(2) {
-            bottom: -10px;
-            animation: wave 12s cubic-bezier(0.36, 0.45, 0.63, 0.53) -.125s infinite, swell 7s ease -1.25s infinite;
-            opacity: 1;
+        .night-theme {
+            background: linear-gradient(45deg, #0f2027, #203a43, #2c5364);
+            background-size: 400% 400%; animation: gradientWave 20s ease infinite;
         }
-        @keyframes wave {
-            0% { margin-left: 0; }
-            100% { margin-left: -1600px; }
+        @keyframes gradientWave {
+            0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
         }
-        @keyframes swell {
-            0%, 100% { transform: translate3d(0,-25px,0); }
-            50% { transform: translate3d(0,5px,0); }
-        }
-        /* Style "verre dépoli" pour les cartes */
         .glass-card {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(15px) saturate(150%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.18); transition: all 0.4s ease;
+            animation: fadeIn 0.5s ease-out forwards; opacity: 0;
+            transform-style: preserve-3d;
         }
         .glass-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: translateY(-10px) scale(1.02); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
         }
-        /* Animation d'apparition pour les éléments */
-        .fade-in {
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); }
+        }
+        .card-1 { animation-delay: 0.1s; } .card-2 { animation-delay: 0.2s; }
+        .card-3 { animation-delay: 0.3s; } .card-4 { animation-delay: 0.4s; } .card-5 { animation-delay: 0.5s; }
+
+        .battery-pool {
+            position: relative; width: 100px; height: 180px;
+            border: 5px solid rgba(255, 255, 255, 0.5);
+            border-radius: 10px; overflow: hidden; margin: 0 auto;
+            background: rgba(0,0,0,0.2);
+        }
+        .battery-water {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: linear-gradient(to top, #0575e6, #021b79);
+            transition: height 1s ease-in-out;
+        }
+        .energy-particles {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
             opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInAnimation 0.6s forwards;
+            box-shadow: 0 0 8px #fff, 0 0 12px #00c6ff;
         }
-        @keyframes fadeInAnimation {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .battery-pool.charging .particle {
+            animation: rise 3s infinite ease-in;
         }
+        @keyframes rise {
+            0% { bottom: -10px; opacity: 0.7; transform: scale(1); }
+            100% { bottom: 100%; opacity: 0; transform: scale(0.5); }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #2c5364; padding: 2rem; border-radius: 1rem;
+            width: 90%; max-width: 500px;
+            transform: scale(0.95); transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
     </style>
 </head>
-<body class="text-gray-200">
+<body class="bg-gray-900">
+    <div id="background" class="background-container day-theme"></div>
 
-    <div class="wave-container">
-        <div class="wave"></div>
-        <div class="wave"></div>
-    </div>
-
-    <div class="relative w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        <!-- =========== HEADER (Adaptatif) =========== -->
-        <header class="flex flex-col sm:flex-row justify-between items-center mb-8 fade-in">
-            <div class="text-center sm:text-left mb-4 sm:mb-0">
-                <h1 class="text-4xl font-black text-white">Aqua-Control</h1>
-                <p class="text-blue-200">Monitoring Solaire de la Piscine</p>
+    <div class="container mx-auto p-4 md:p-6">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight">Tableau de Bord Solaire IA</h1>
+            <div class="flex justify-center items-center gap-4">
+                <p id="location-name" class="text-lg opacity-80 mt-2">Montana-village, Suisse</p>
+                <button id="settings-button" class="mt-2 p-2 bg-white/10 rounded-full hover:bg-white/20 transition"><i data-lucide="settings" class="w-5 h-5"></i></button>
             </div>
-            <div class="text-center sm:text-right glass-card rounded-xl px-4 py-2">
-                <p class="text-sm text-blue-300">Dernière synchro:</p>
-                <p id="last-updated" class="font-semibold text-white">En attente...</p>
-            </div>
+            <p id="last-updated" class="text-sm opacity-60 mt-2">En attente de données...</p>
         </header>
 
-        <!-- =========== DASHBOARD TEMPS RÉEL =========== -->
-        <section class="mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Température -->
-                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.1s;">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-lg text-white">Température Eau</h3>
-                        <div class="bg-red-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path></svg></div>
-                    </div>
-                    <p class="text-5xl font-black text-white"><span id="valeur-temp" aria-live="polite">--</span>°C</p>
+        <main class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+            <!-- Weather Card -->
+            <div class="glass-card card-1 rounded-2xl p-6 flex flex-col justify-between">
+                <h2 class="text-2xl font-semibold mb-4 text-center">Météo Actuelle</h2>
+                <div class="text-center mb-4">
+                    <img id="weather-icon" src="https://placehold.co/100x100/ffffff/000000?text=☀️" alt="Icône météo" class="w-24 h-24 mx-auto -mt-4 -mb-2">
+                    <p id="weather-desc" class="text-xl opacity-80 capitalize">--</p>
                 </div>
-                <!-- Voltage -->
-                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.2s;">
-                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-lg text-white">Voltage Batterie</h3>
-                        <div class="bg-sky-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
-                    </div>
-                    <p class="text-5xl font-black text-white"><span id="valeur-voltage" aria-live="polite">--</span> V</p>
-                </div>
-                <!-- Batterie -->
-                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.3s;">
-                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-lg text-white">Niveau Batterie</h3>
-                        <div class="bg-emerald-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10.5v3m-3-6v9a2 2 0 01-2 2H5a2 2 0 01-2-2v-9a2 2 0 012-2h11a2 2 0 012 2z"></path></svg></div>
-                    </div>
-                    <p class="text-5xl font-black text-white"><span id="valeur-batterie" aria-live="polite">--</span> %</p>
-                </div>
-                 <!-- Production Solaire -->
-                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.4s;">
-                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-lg text-white">Charge Solaire</h3>
-                        <div class="bg-amber-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></div>
-                    </div>
-                    <p id="solar-status" class="text-2xl font-bold text-gray-400">En attente...</p>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="flex items-center" title="Humidité"><i data-lucide="droplets" class="mr-2 text-cyan-300"></i><span id="humidity">-- %</span></div>
+                    <div class="flex items-center" title="Vent"><i data-lucide="wind" class="mr-2 text-gray-300"></i><span id="wind-speed">-- km/h</span></div>
+                    <div class="flex items-center" title="Pollen (graminées)"><i data-lucide="leaf" class="mr-2 text-green-400"></i><span id="pollen">--</span></div>
+                    <div class="flex items-center" title="Coucher du soleil"><i data-lucide="sunset" class="mr-2 text-orange-400"></i><span id="sunset-time">--:--</span></div>
                 </div>
             </div>
+            <!-- Battery Card -->
+            <div class="glass-card card-2 rounded-2xl p-6 text-center flex flex-col justify-between">
+                <div>
+                    <h2 class="text-2xl font-semibold mb-4">Batterie</h2>
+                    <div id="battery-pool" class="battery-pool">
+                        <div id="battery-level" class="battery-water"></div>
+                        <div class="energy-particles"></div>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-5xl font-bold mt-4"><span id="battery-percentage">49</span>%</p>
+                    <p id="battery-voltage" class="text-xl opacity-80">-- V</p>
+                </div>
+            </div>
+            <!-- Temperature Card -->
+            <div class="glass-card card-3 rounded-2xl p-6 text-center flex flex-col justify-center items-center">
+                 <h2 class="text-2xl font-semibold mb-4">Températures</h2>
+                 <div class="flex justify-around w-full items-center">
+                    <div>
+                        <i data-lucide="thermometer-sun" class="w-12 h-12 mx-auto text-orange-300"></i>
+                        <p class="text-3xl font-bold mt-2"><span id="water-temp">--</span>°C</p>
+                        <p class="opacity-80">Eau</p>
+                    </div>
+                    <div>
+                        <i data-lucide="thermometer-snowflake" class="w-12 h-12 mx-auto text-cyan-300"></i>
+                        <p class="text-3xl font-bold mt-2"><span id="air-temp">--</span>°C</p>
+                        <p class="opacity-80">Air</p>
+                    </div>
+                 </div>
+            </div>
+            <!-- Solar Status Card -->
+            <div class="glass-card card-4 rounded-2xl p-6 text-center flex flex-col justify-center items-center">
+                <h2 class="text-2xl font-semibold mb-4">État Solaire</h2>
+                <div class="w-24 h-24 flex items-center justify-center mb-4"><i id="solar-status-icon" data-lucide="loader" class="w-16 h-16 animate-spin"></i></div>
+                <p id="solar-status" class="text-2xl font-semibold">--</p>
+                <p id="solar-info" class="text-md opacity-80 mt-1">--</p>
+            </div>
+        </main>
+
+        <section id="ai-section" class="glass-card card-5 rounded-2xl p-6">
+            <h2 class="text-2xl font-semibold mb-4 flex items-center gap-2"><i data-lucide="sparkles"></i>Conseil du Jour</h2>
+            <p id="ai-advice" class="text-lg opacity-90">Chargement du conseil de l'IA...</p>
         </section>
 
-        <!-- =========== ANALYSE & HISTORIQUE =========== -->
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Colonne des graphiques -->
-            <div class="lg:col-span-2 space-y-8">
-                <div class="glass-card p-4 sm:p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.5s;">
-                    <h3 class="font-bold text-xl mb-4 text-white">Évolution sur 24h</h3>
-                    <canvas id="mainChart"></canvas>
-                </div>
-                 <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.6s;">
-                    <h3 class="font-bold text-xl mb-4 text-white">Production Solaire Journalière</h3>
-                    <p class="text-6xl font-black text-sky-300"><span id="daily-production">--</span> mAh</p>
-                    <p class="text-blue-200">Estimée aujourd'hui</p>
-                </div>
-            </div>
-
-            <!-- Colonne de l'historique (Mobile-friendly) -->
-            <div class="glass-card p-4 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.7s;">
-                <h3 class="font-bold text-xl mb-4 p-2 sm:p-4 text-white">Historique des données</h3>
-                <div id="history-container" class="h-[600px] overflow-y-auto space-y-2 pr-2">
-                    <!-- Données chargées ici via JS -->
-                </div>
-            </div>
+        <section class="glass-card rounded-2xl p-4 md:p-6 mt-8" style="animation-delay: 0.6s;">
+            <h2 class="text-2xl font-semibold mb-4 text-center md:text-left">Historique des Données</h2>
+            <div class="h-96"><canvas id="historyChart"></canvas></div>
         </section>
+    </div>
+
+    <!-- API Key Modal -->
+    <div id="api-key-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Bienvenue !</h2>
+            <p class="mb-4 opacity-80">Pour une expérience personnalisée et activer les conseils de l'IA, veuillez entrer votre nom et votre clé API de Google AI Studio.</p>
+            <label for="name-input" class="block mb-2 text-sm font-medium">Votre nom</label>
+            <input type="text" id="name-input" placeholder="Entrez votre nom" class="w-full p-3 mb-4 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+            <label for="api-key-input" class="block mb-2 text-sm font-medium">Clé API Google AI</label>
+            <input type="password" id="api-key-input" placeholder="Entrez votre clé API ici" class="w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+            <div class="mt-6 flex justify-end gap-4">
+                <button id="cancel-api-key" class="py-2 px-4 rounded-lg bg-white/10 hover:bg-white/20 transition">Plus tard</button>
+                <button id="save-api-key" class="py-2 px-4 rounded-lg bg-cyan-500 hover:bg-cyan-600 transition font-semibold">Sauvegarder</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        const googleSheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfkIi-e6L70jak9u83D9bLiyCeWHJXnQ2BGm2d5MjQbeIHeGDt1zyUDOtPU_H9n0idSiNWRU2ldjSi/pub?gid=0&single=true&output=csv';
-        const SOLAR_PANEL_CURRENT_MA = 100; // Courant du panneau solaire en mA
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONFIGURATION ---
+            const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfkIi-e6L70jak9u83D9bLiyCeWHJXnQ2BGm2d5MjQbeIHeGDt1zyUDOtPU_H9n0idSiNWRU2ldjSi/pub?gid=0&single=true&output=csv';
+            const LATITUDE = 46.3167; 
+            const LONGITUDE = 7.4833;
+            const UPDATE_INTERVAL = 300000;
 
-        // --- ÉLÉMENTS DU DOM ---
-        const elements = {
-            temp: document.getElementById('valeur-temp'),
-            voltage: document.getElementById('valeur-voltage'),
-            battery: document.getElementById('valeur-batterie'),
-            lastUpdated: document.getElementById('last-updated'),
-            solarStatus: document.getElementById('solar-status'),
-            dailyProduction: document.getElementById('daily-production'),
-            historyContainer: document.getElementById('history-container'),
-            chartCanvas: document.getElementById('mainChart'),
-        };
+            // --- DOM ELEMENTS ---
+            const backgroundEl = document.getElementById('background');
+            const lastUpdatedEl = document.getElementById('last-updated');
+            const waterTempEl = document.getElementById('water-temp');
+            const airTempEl = document.getElementById('air-temp');
+            const batteryPoolEl = document.getElementById('battery-pool');
+            const batteryLevelEl = document.getElementById('battery-level');
+            const batteryPercentageEl = document.getElementById('battery-percentage');
+            const batteryVoltageEl = document.getElementById('battery-voltage');
+            const solarStatusIconEl = document.getElementById('solar-status-icon');
+            const solarStatusEl = document.getElementById('solar-status');
+            const solarInfoEl = document.getElementById('solar-info');
+            const aiAdviceEl = document.getElementById('ai-advice');
+            const apiKeyModal = document.getElementById('api-key-modal');
+            const settingsButton = document.getElementById('settings-button');
+            const saveApiKeyButton = document.getElementById('save-api-key');
+            const cancelApiKeyButton = document.getElementById('cancel-api-key');
+            const apiKeyInput = document.getElementById('api-key-input');
+            const nameInput = document.getElementById('name-input');
+            const weatherIconEl = document.getElementById('weather-icon');
+            const weatherDescEl = document.getElementById('weather-desc');
+            const humidityEl = document.getElementById('humidity');
+            const windSpeedEl = document.getElementById('wind-speed');
+            const pollenEl = document.getElementById('pollen');
+            const sunsetTimeEl = document.getElementById('sunset-time');
 
-        let mainChart = null;
+            // --- DATA & STATE ---
+            let historyChart = null;
+            let previousDataPoint = null;
+            let geminiApiKey = localStorage.getItem('geminiApiKey');
+            let userName = localStorage.getItem('userName');
 
-        // --- FONCTION PRINCIPALE ---
-        async function fetchDataAndRefreshUI() {
-            try {
-                // Ajout d'un cache-buster pour forcer le rechargement du fichier
-                const response = await fetch(`${googleSheetCsvUrl}&cacheBuster=${new Date().getTime()}`);
-                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
-                
-                const csvData = await response.text();
-                const allData = parseCsvData(csvData);
+            // --- HELPER FUNCTIONS ---
+            const animateValue = (obj, start, end, duration) => {
+                let startTimestamp = null;
+                const step = (timestamp) => {
+                    if (!startTimestamp) startTimestamp = timestamp;
+                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                    let currentValue = progress * (end - start) + start;
+                    if (Number.isInteger(end) && Number.isInteger(start)) {
+                        obj.innerHTML = Math.floor(currentValue);
+                    } else {
+                        obj.innerHTML = currentValue.toFixed(1);
+                    }
+                    if (progress < 1) {
+                        window.requestAnimationFrame(step);
+                    }
+                };
+                window.requestAnimationFrame(step);
+            };
 
-                if (allData.length === 0) {
-                    console.warn("Aucune donnée valide trouvée.");
-                    elements.lastUpdated.textContent = "Pas de données";
+            const getWeatherDescription = (code) => {
+                const map = { 0: "Ciel clair", 1: "Généralement clair", 2: "Partiellement nuageux", 3: "Couvert", 45: "Brouillard", 48: "Brouillard givrant", 51: "Bruine légère", 53: "Bruine modérée", 55: "Bruine dense", 61: "Pluie légère", 63: "Pluie modérée", 65: "Pluie forte", 71: "Neige légère", 73: "Neige modérée", 75: "Neige forte", 80: "Averses légères", 81: "Averses modérées", 82: "Averses violentes", 95: "Orage", 96: "Orage avec grêle" };
+                return map[code] || "Inconnu";
+            };
+            const getWeatherIcon = (code) => {
+                const dayMap = { 0: "01d", 1: "02d", 2: "03d", 3: "04d", 45: "50d", 48: "50d", 51: "09d", 53: "09d", 55: "09d", 61: "10d", 63: "10d", 65: "10d", 71: "13d", 73: "13d", 75: "13d", 80: "09d", 81: "09d", 82: "09d", 95: "11d", 96: "11d" };
+                const icon = dayMap[code] || "01d";
+                return `https://openweathermap.org/img/wn/${icon}@2x.png`;
+            };
+            const getPollenLevel = (value) => {
+                if (!value && value !== 0) return "N/A";
+                if (value < 1) return "Nul"; if (value < 5) return "Bas"; if (value < 20) return "Moyen";
+                if (value < 100) return "Haut"; return "Très Haut";
+            };
+            
+            const createEnergyParticles = () => {
+                const particleContainer = batteryPoolEl.querySelector('.energy-particles');
+                if (!particleContainer || particleContainer.children.length > 0) return;
+                for (let i = 0; i < 15; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    const size = Math.random() * 5 + 2;
+                    particle.style.width = `${size}px`;
+                    particle.style.height = `${size}px`;
+                    particle.style.left = `${Math.random() * 90}%`;
+                    particle.style.animationDelay = `${Math.random() * 3}s`;
+                    particle.style.animationDuration = `${Math.random() * 2 + 2}s`;
+                    particleContainer.appendChild(particle);
+                }
+            };
+
+            // --- API & DATA FETCHING ---
+            const parseCSV = (csvText) => {
+                const lines = csvText.trim().split('\n');
+                return lines.slice(1).map(line => {
+                    const values = line.split(',');
+                    if (values.length >= 4) {
+                        return { voltage: values[0].trim(), temperature: values[1].trim(), batterypercentage: values[2].trim(), timestamp: values[3].trim() };
+                    }
+                    return null;
+                }).filter(item => item !== null);
+            };
+
+            const fetchSolarData = async () => {
+                const response = await fetch(`${GOOGLE_SHEET_URL}&_=${new Date().getTime()}`);
+                if (!response.ok) throw new Error(`Erreur Google Sheet: ${response.statusText}`);
+                const csvText = await response.text();
+                const data = parseCSV(csvText);
+                if (data.length === 0) throw new Error("Aucune donnée solaire valide trouvée.");
+                return data;
+            };
+            
+            const fetchWeatherData = async () => {
+                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=sunset&timezone=auto`;
+                const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LATITUDE}&longitude=${LONGITUDE}&current=grass_pollen`;
+
+                const [weatherResponse, airQualityResponse] = await Promise.all([
+                    fetch(weatherUrl),
+                    fetch(airQualityUrl)
+                ]);
+
+                if (!weatherResponse.ok) throw new Error(`Erreur Météo: ${weatherResponse.statusText}`);
+                if (!airQualityResponse.ok) throw new Error(`Erreur Qualité de l'air: ${airQualityResponse.statusText}`);
+
+                const weatherData = await weatherResponse.json();
+                const airQualityData = await airQualityResponse.json();
+
+                const combinedData = {
+                    ...weatherData,
+                    ...airQualityData,
+                    current: {
+                        ...weatherData.current,
+                        ...airQualityData.current,
+                    }
+                };
+                return combinedData;
+            };
+            
+            const getAIAdvice = async (solarData, weatherData) => {
+                const displayName = userName || "l'utilisateur";
+                if (!geminiApiKey) {
+                    aiAdviceEl.innerHTML = `Bonjour ${displayName} ! Veuillez <button onclick="document.getElementById('api-key-modal').classList.add('active')" class="underline font-semibold">entrer une clé API</button> pour obtenir un conseil.`;
                     return;
                 }
+                aiAdviceEl.textContent = "L'IA réfléchit...";
 
-                const latestData = allData[allData.length - 1];
-                const previousData = allData.length > 1 ? allData[allData.length - 2] : null;
-
-                updateDashboard(latestData, previousData);
-                updateHistoryList(allData);
-                updateSolarStats(allData);
-                updateChart(allData);
-
-                elements.lastUpdated.textContent = dateFns.format(new Date(), 'HH:mm:ss');
-
-            } catch (error) {
-                console.error("Erreur lors de la mise à jour:", error);
-                elements.lastUpdated.textContent = "Échec de la synchro";
-            }
-        }
-
-        // --- PARSING DES DONNÉES ---
-        function parseCsvData(csvData) {
-            const lignes = csvData.trim().split('\n').slice(1); // On ignore l'en-tête
-            return lignes.map(ligne => {
-                const valeurs = ligne.split(',');
-                if (valeurs.length < 4) return null;
-                
-                // Utilisation de l'objet global 'dateFns' fourni par la librairie
-                const dataPoint = {
-                    timestamp: dateFns.parse(valeurs[0], 'dd/MM/yyyy HH:mm:ss', new Date()),
-                    voltage: parseFloat(valeurs[1].replace(',', '.')),
-                    temp: parseFloat(valeurs[2].replace(',', '.')),
-                    battery: parseInt(valeurs[3], 10),
-                };
-
-                // Validation robuste des données parsées
-                if (isNaN(dataPoint.voltage) || isNaN(dataPoint.temp) || isNaN(dataPoint.battery) || !dateFns.isValid(dataPoint.timestamp)) {
-                    console.warn("Ligne de données invalide ignorée:", ligne);
-                    return null;
+                const latestSolar = solarData[solarData.length - 1];
+                let batteryInfo = "";
+                if (parseFloat(latestSolar.batterypercentage) < 25) {
+                    batteryInfo = `Note : Le niveau de la batterie est un peu bas (${latestSolar.batterypercentage}%).`;
                 }
-                return dataPoint;
 
-            }).filter(Boolean); // Filtre les entrées null (invalides)
-        }
+                const prompt = `
+                    Tu es un assistant amical pour un tableau de bord. L'utilisateur s'appelle ${displayName}.
+                    Voici les données actuelles :
+                    - Température de l'eau de la piscine: ${latestSolar.temperature}°C
+                    - Température de l'air extérieur: ${weatherData.current.temperature_2m}°C
+                    - Météo: ${getWeatherDescription(weatherData.current.weather_code)}
+                    - Vitesse du vent: ${weatherData.current.wind_speed_10m.toFixed(1)} km/h
+                    - Humidité: ${weatherData.current.relative_humidity_2m}%
+                    ${batteryInfo}
 
-        // --- MISES À JOUR DE L'UI ---
-        function updateDashboard(latest, previous) {
-            elements.temp.textContent = latest.temp.toFixed(1);
-            elements.voltage.textContent = latest.voltage.toFixed(2);
-            elements.battery.textContent = latest.battery;
-
-            // Détermine le statut de la charge solaire
-            if (previous && latest.voltage > previous.voltage + 0.01) {
-                elements.solarStatus.textContent = "En charge";
-                elements.solarStatus.className = "text-2xl font-bold text-emerald-300";
-            } else {
-                elements.solarStatus.textContent = "Stable";
-                elements.solarStatus.className = "text-2xl font-bold text-amber-300";
-            }
-        }
-
-        // AMÉLIORATION: Remplacement du tableau par une liste adaptative
-        function updateHistoryList(allData) {
-            elements.historyContainer.innerHTML = '';
-            const recentData = allData.slice(-50).reverse(); // Affiche les 50 plus récents
-            recentData.forEach(data => {
-                const entryDiv = document.createElement('div');
-                entryDiv.className = 'flex justify-between items-center p-3 rounded-lg hover:bg-sky-500/10';
-                entryDiv.innerHTML = `
-                    <div>
-                        <div class="font-semibold text-white">${data.temp.toFixed(1)}°C / ${data.battery}%</div>
-                        <div class="text-xs text-blue-300">${dateFns.format(data.timestamp, 'HH:mm:ss')}</div>
-                    </div>
-                    <div class="font-mono text-sm text-sky-300">${data.voltage.toFixed(2)}V</div>
+                    Basé sur ces informations, donne un conseil court (une ou deux phrases), sympathique et personnalisé à ${displayName}.
+                    Concentre-toi sur la météo et la piscine. Suggère une activité, donne un conseil pratique (par exemple, si le vent va amener des feuilles, ou si la différence de température est idéale pour se baigner). Sois créatif et direct. Ne répète pas les données brutes.
                 `;
-                elements.historyContainer.appendChild(entryDiv);
-            });
-        }
-
-        // Calcul de la production solaire sur la journée en cours
-        function updateSolarStats(allData) {
-            let totalProductionMah = 0;
-            const today = new Date();
-
-            for (let i = 1; i < allData.length; i++) {
-                const current = allData[i];
-                const previous = allData[i - 1];
-
-                // On ne traite que les données d'aujourd'hui
-                if (!dateFns.isToday(current.timestamp)) continue;
-
-                // Si le voltage augmente, on considère que le panneau charge
-                if (current.voltage > previous.voltage + 0.01) {
-                    const durationInMs = current.timestamp.getTime() - previous.timestamp.getTime();
-                    const durationInHours = durationInMs / (1000 * 60 * 60);
-                    totalProductionMah += SOLAR_PANEL_CURRENT_MA * durationInHours;
+                
+                try {
+                    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                    const payload = { contents: chatHistory };
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) throw new Error(`Erreur de l'API Gemini (${response.status})`);
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0) {
+                        aiAdviceEl.textContent = result.candidates[0].content.parts[0].text;
+                    } else { throw new Error("Réponse inattendue de l'API Gemini."); }
+                } catch (error) {
+                    console.error("Erreur Gemini:", error);
+                    aiAdviceEl.textContent = `Erreur de l'IA : ${error.message}. Vérifiez votre clé API.`;
                 }
-            }
-            elements.dailyProduction.textContent = Math.round(totalProductionMah);
-        }
+            };
 
-        function updateChart(allData) {
-            // On affiche les 100 derniers points pour garder le graphique lisible
-            const chartData = allData.slice(-100); 
+            // --- UI UPDATE FUNCTIONS ---
+            const updateUI = (solarData, weatherData) => {
+                const latestSolarData = solarData[solarData.length - 1];
+                updateTheme(weatherData);
+                updateWeatherCard(weatherData);
+                updateTemperatures(latestSolarData, weatherData);
+                updateBattery(latestSolarData);
+                updateSolarStatus(latestSolarData);
+                createOrUpdateChart(solarData);
+                previousDataPoint = latestSolarData;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            };
+
+            const updateTheme = (weatherData) => {
+                const currentTime = new Date().getTime();
+                const sunsetTime = new Date(weatherData.daily.sunset[0]).getTime();
+                backgroundEl.className = currentTime < sunsetTime ? 'background-container day-theme' : 'background-container night-theme';
+            };
             
-            if (!mainChart) {
-                const ctx = elements.chartCanvas.getContext('2d');
-                mainChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [
-                            {
-                                label: 'Température (°C)',
-                                data: chartData.map(d => ({x: d.timestamp, y: d.temp})),
-                                borderColor: 'rgba(252, 165, 165, 0.8)',
-                                backgroundColor: 'rgba(252, 165, 165, 0.1)',
-                                yAxisID: 'y_temp',
-                                tension: 0.4,
-                                fill: true,
-                            },
-                            {
-                                label: 'Batterie (%)',
-                                data: chartData.map(d => ({x: d.timestamp, y: d.battery})),
-                                borderColor: 'rgba(125, 211, 252, 0.8)',
-                                backgroundColor: 'rgba(125, 211, 252, 0.1)',
-                                yAxisID: 'y_battery',
-                                tension: 0.4,
-                                fill: true,
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                type: 'time',
-                                time: {
-                                    unit: 'hour',
-                                    displayFormats: { hour: 'HH:mm' }
-                                },
-                                ticks: { color: 'rgba(255,255,255,0.7)' },
-                                grid: { color: 'rgba(255,255,255,0.1)' }
-                            },
-                            y_temp: {
-                                position: 'left',
-                                title: { display: true, text: '°C', color: 'rgba(255,255,255,0.7)' },
-                                ticks: { color: 'rgba(255,255,255,0.7)' },
-                                grid: { color: 'rgba(255,255,255,0.1)' }
-                            },
-                            y_battery: {
-                                position: 'right',
-                                min: 0, max: 100,
-                                title: { display: true, text: '%', color: 'rgba(255,255,255,0.7)' },
-                                ticks: { color: 'rgba(255,255,255,0.7)' },
-                                grid: { drawOnChartArea: false }
-                            }
-                        },
-                        plugins: {
-                            legend: { labels: { color: 'rgba(255,255,255,0.9)' } }
-                        }
-                    }
-                });
-            } else {
-                mainChart.data.datasets[0].data = chartData.map(d => ({x: d.timestamp, y: d.temp}));
-                mainChart.data.datasets[1].data = chartData.map(d => ({x: d.timestamp, y: d.battery}));
-                mainChart.update();
-            }
-        }
+            const updateWeatherCard = (weatherData) => {
+                const { current, daily } = weatherData;
+                weatherDescEl.textContent = getWeatherDescription(current.weather_code);
+                weatherIconEl.src = getWeatherIcon(current.weather_code);
+                humidityEl.textContent = `${current.relative_humidity_2m} %`;
+                windSpeedEl.textContent = `${current.wind_speed_10m.toFixed(1)} km/h`;
+                pollenEl.textContent = getPollenLevel(current.grass_pollen);
+                sunsetTimeEl.textContent = new Date(daily.sunset[0]).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+            };
 
-        // --- DÉMARRAGE ---
-        // CORRECTION: Utilisation de 'load' au lieu de 'DOMContentLoaded' pour s'assurer que toutes les librairies sont chargées.
-        window.addEventListener('load', () => {
-            fetchDataAndRefreshUI(); // Premier chargement
-            setInterval(fetchDataAndRefreshUI, 120000); // Rafraîchir toutes les 2 minutes
+            const updateTemperatures = (solar, weather) => {
+                animateValue(waterTempEl, parseFloat(waterTempEl.textContent) || parseFloat(solar.temperature), parseFloat(solar.temperature), 1000);
+                animateValue(airTempEl, parseFloat(airTempEl.textContent) || weather.current.temperature_2m, weather.current.temperature_2m, 1000);
+            };
+            
+            const updateBattery = (solar) => {
+                const percentage = Math.round(parseFloat(solar.batterypercentage));
+                animateValue(batteryPercentageEl, parseInt(batteryPercentageEl.textContent) || percentage, percentage, 1000);
+                batteryVoltageEl.textContent = `${parseFloat(solar.voltage).toFixed(2)} V`;
+                batteryLevelEl.style.height = `${percentage}%`;
+            };
+
+            const updateSolarStatus = (currentData) => {
+                if (!previousDataPoint) {
+                    solarStatusEl.textContent = "Analyse...";
+                    solarStatusIconEl.setAttribute('data-lucide', 'loader');
+                    solarStatusIconEl.classList.add('animate-spin');
+                    return;
+                }
+                
+                solarStatusIconEl.classList.remove('animate-spin');
+                const voltageChange = parseFloat(currentData.voltage) - parseFloat(previousDataPoint.voltage);
+
+                if (voltageChange > 0.01) { // Charging based on voltage increase
+                    solarStatusEl.textContent = "En Charge";
+                    solarInfoEl.textContent = "Production solaire active.";
+                    solarStatusIconEl.setAttribute('data-lucide', 'sun');
+                    batteryPoolEl.classList.add('charging');
+                } else { // Discharging or Idle
+                    batteryPoolEl.classList.remove('charging');
+                    if (voltageChange < -0.01) {
+                        solarStatusEl.textContent = "Décharge";
+                        solarInfoEl.textContent = "Consommation d'énergie.";
+                        solarStatusIconEl.setAttribute('data-lucide', 'moon');
+                    } else {
+                        solarStatusEl.textContent = "Stable";
+                        solarInfoEl.textContent = "Le niveau est constant.";
+                        solarStatusIconEl.setAttribute('data-lucide', 'battery-full');
+                    }
+                }
+            };
+
+            const createOrUpdateChart = (data) => {
+                const chartCtx = document.getElementById('historyChart').getContext('2d');
+                const chartData = data.slice(-100);
+                const labels = chartData.map(d => new Date(d.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+                const datasets = [
+                    { label: 'Tension (V)', data: chartData.map(d => parseFloat(d.voltage)), borderColor: '#f1c40f', yAxisID: 'yVoltage', tension: 0.3, borderWidth: 2, pointRadius: 1 },
+                    { label: 'Température (°C)', data: chartData.map(d => parseFloat(d.temperature)), borderColor: '#e74c3c', yAxisID: 'yTemp', tension: 0.3, borderWidth: 2, pointRadius: 1 },
+                    { label: 'Batterie (%)', data: chartData.map(d => parseFloat(d.batterypercentage)), borderColor: '#3498db', backgroundColor: 'rgba(52, 152, 219, 0.2)', yAxisID: 'yBattery', tension: 0.3, borderWidth: 2, pointRadius: 1, fill: true }
+                ];
+                const chartOptions = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { ticks: { color: 'white' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, yVoltage: { type: 'linear', position: 'left', title: { display: true, text: 'Tension', color: '#f1c40f' }, ticks: { color: '#f1c40f' }, grid: { drawOnChartArea: false } }, yTemp: { type: 'linear', position: 'left', title: { display: true, text: 'Température', color: '#e74c3c' }, ticks: { color: '#e74c3c' }, grid: { drawOnChartArea: false }, offset: true }, yBattery: { type: 'linear', position: 'right', min: 0, max: 100, title: { display: true, text: 'Batterie %', color: '#3498db' }, ticks: { color: '#3498db' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } } }, plugins: { legend: { labels: { color: 'white' } }, tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.7)' } } };
+                if (historyChart) {
+                    historyChart.data.labels = labels;
+                    historyChart.data.datasets.forEach((d, i) => { d.data = datasets[i].data; });
+                    historyChart.update();
+                } else {
+                    historyChart = new Chart(chartCtx, { type: 'line', data: { labels, datasets }, options: chartOptions });
+                }
+            };
+            
+            // --- MODAL & API KEY LOGIC ---
+            const openModal = () => {
+                nameInput.value = localStorage.getItem('userName') || '';
+                apiKeyInput.value = localStorage.getItem('geminiApiKey') || '';
+                apiKeyModal.classList.add('active');
+            };
+            const closeModal = () => apiKeyModal.classList.remove('active');
+            
+            settingsButton.addEventListener('click', openModal);
+            cancelApiKeyButton.addEventListener('click', closeModal);
+            saveApiKeyButton.addEventListener('click', () => {
+                const newKey = apiKeyInput.value.trim();
+                const newName = nameInput.value.trim();
+                if (newKey && newName) {
+                    localStorage.setItem('geminiApiKey', newKey);
+                    localStorage.setItem('userName', newName);
+                    geminiApiKey = newKey;
+                    userName = newName;
+                    closeModal();
+                    fetchAllData();
+                }
+            });
+            
+            // --- INITIALIZATION ---
+            const fetchAllData = async () => {
+                try {
+                    const [solarData, weatherData] = await Promise.all([ fetchSolarData(), fetchWeatherData() ]);
+                    updateUI(solarData, weatherData);
+                    await getAIAdvice(solarData, weatherData);
+                    lastUpdatedEl.textContent = `Dernière mise à jour : ${new Date().toLocaleTimeString('fr-FR')}`;
+                } catch (error) {
+                    console.error("Erreur lors de la récupération des données:", error);
+                    lastUpdatedEl.textContent = `Erreur de chargement.`;
+                    aiAdviceEl.textContent = `Impossible de charger les données: ${error.message}`;
+                }
+            };
+            
+            const main = async () => {
+                createEnergyParticles(); // Create particles once on load
+                if (!geminiApiKey || !userName) { openModal(); }
+                await fetchAllData();
+                setInterval(fetchAllData, UPDATE_INTERVAL);
+            };
+            
+            main();
         });
     </script>
 </body>
