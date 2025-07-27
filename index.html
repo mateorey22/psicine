@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aqua-Control Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Utilisation de versions UMD spécifiques et plus récentes pour une meilleure compatibilité navigateur -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Fond bleu nuit */
+        }
+        /* Animation de vagues en arrière-plan pour un effet aquatique */
+        .wave-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+        .wave {
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="none"><path d="M0 350V1080H1920V350C1720 200 1520 200 1320 350C1120 500 920 500 720 350C520 200 320 200 120 350Z" fill="%230099ff" fill-opacity="0.15"></path></svg>') repeat-x;
+            position: absolute;
+            bottom: -20px;
+            width: 6400px;
+            height: 198px;
+            animation: wave 15s cubic-bezier(0.36, 0.45, 0.63, 0.53) infinite;
+            transform: translate3d(0, 0, 0);
+        }
+        .wave:nth-of-type(2) {
+            bottom: -10px;
+            animation: wave 12s cubic-bezier(0.36, 0.45, 0.63, 0.53) -.125s infinite, swell 7s ease -1.25s infinite;
+            opacity: 1;
+        }
+        @keyframes wave {
+            0% { margin-left: 0; }
+            100% { margin-left: -1600px; }
+        }
+        @keyframes swell {
+            0%, 100% { transform: translate3d(0,-25px,0); }
+            50% { transform: translate3d(0,5px,0); }
+        }
+        /* Style "verre dépoli" pour les cartes */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(15px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        /* Animation d'apparition pour les éléments */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInAnimation 0.6s forwards;
+        }
+        @keyframes fadeInAnimation {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div class="wave-container">
+        <div class="wave"></div>
+        <div class="wave"></div>
+    </div>
+
+    <div class="relative w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- =========== HEADER (Adaptatif) =========== -->
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8 fade-in">
+            <div class="text-center sm:text-left mb-4 sm:mb-0">
+                <h1 class="text-4xl font-black text-white">Aqua-Control</h1>
+                <p class="text-blue-200">Monitoring Solaire de la Piscine</p>
+            </div>
+            <div class="text-center sm:text-right glass-card rounded-xl px-4 py-2">
+                <p class="text-sm text-blue-300">Dernière synchro:</p>
+                <p id="last-updated" class="font-semibold text-white">En attente...</p>
+            </div>
+        </header>
+
+        <!-- =========== DASHBOARD TEMPS RÉEL =========== -->
+        <section class="mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Température -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.1s;">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-lg text-white">Température Eau</h3>
+                        <div class="bg-red-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path></svg></div>
+                    </div>
+                    <p class="text-5xl font-black text-white"><span id="valeur-temp" aria-live="polite">--</span>°C</p>
+                </div>
+                <!-- Voltage -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.2s;">
+                     <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-lg text-white">Voltage Batterie</h3>
+                        <div class="bg-sky-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-sky-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+                    </div>
+                    <p class="text-5xl font-black text-white"><span id="valeur-voltage" aria-live="polite">--</span> V</p>
+                </div>
+                <!-- Batterie -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.3s;">
+                     <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-lg text-white">Niveau Batterie</h3>
+                        <div class="bg-emerald-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10.5v3m-3-6v9a2 2 0 01-2 2H5a2 2 0 01-2-2v-9a2 2 0 012-2h11a2 2 0 012 2z"></path></svg></div>
+                    </div>
+                    <p class="text-5xl font-black text-white"><span id="valeur-batterie" aria-live="polite">--</span> %</p>
+                </div>
+                 <!-- Production Solaire -->
+                <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.4s;">
+                     <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-lg text-white">Charge Solaire</h3>
+                        <div class="bg-amber-500/20 p-2 rounded-full"><svg class="w-6 h-6 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></div>
+                    </div>
+                    <p id="solar-status" class="text-2xl font-bold text-gray-400">En attente...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- =========== ANALYSE & HISTORIQUE =========== -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Colonne des graphiques -->
+            <div class="lg:col-span-2 space-y-8">
+                <div class="glass-card p-4 sm:p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.5s;">
+                    <h3 class="font-bold text-xl mb-4 text-white">Évolution sur 24h</h3>
+                    <canvas id="mainChart"></canvas>
+                </div>
+                 <div class="glass-card p-6 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.6s;">
+                    <h3 class="font-bold text-xl mb-4 text-white">Production Solaire Journalière</h3>
+                    <p class="text-6xl font-black text-sky-300"><span id="daily-production">--</span> mAh</p>
+                    <p class="text-blue-200">Estimée aujourd'hui</p>
+                </div>
+            </div>
+
+            <!-- Colonne de l'historique (Mobile-friendly) -->
+            <div class="glass-card p-4 rounded-2xl shadow-lg fade-in" style="animation-delay: 0.7s;">
+                <h3 class="font-bold text-xl mb-4 p-2 sm:p-4 text-white">Historique des données</h3>
+                <div id="history-container" class="h-[600px] overflow-y-auto space-y-2 pr-2">
+                    <!-- Données chargées ici via JS -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const googleSheetCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfkIi-e6L70jak9u83D9bLiyCeWHJXnQ2BGm2d5MjQbeIHeGDt1zyUDOtPU_H9n0idSiNWRU2ldjSi/pub?gid=0&single=true&output=csv';
+        const SOLAR_PANEL_CURRENT_MA = 100; // Courant du panneau solaire en mA
+
+        // --- ÉLÉMENTS DU DOM ---
+        const elements = {
+            temp: document.getElementById('valeur-temp'),
+            voltage: document.getElementById('valeur-voltage'),
+            battery: document.getElementById('valeur-batterie'),
+            lastUpdated: document.getElementById('last-updated'),
+            solarStatus: document.getElementById('solar-status'),
+            dailyProduction: document.getElementById('daily-production'),
+            historyContainer: document.getElementById('history-container'),
+            chartCanvas: document.getElementById('mainChart'),
+        };
+
+        let mainChart = null;
+
+        // --- FONCTION PRINCIPALE ---
+        async function fetchDataAndRefreshUI() {
+            try {
+                // Ajout d'un cache-buster pour forcer le rechargement du fichier
+                const response = await fetch(`${googleSheetCsvUrl}&cacheBuster=${new Date().getTime()}`);
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                
+                const csvData = await response.text();
+                const allData = parseCsvData(csvData);
+
+                if (allData.length === 0) {
+                    console.warn("Aucune donnée valide trouvée.");
+                    elements.lastUpdated.textContent = "Pas de données";
+                    return;
+                }
+
+                const latestData = allData[allData.length - 1];
+                const previousData = allData.length > 1 ? allData[allData.length - 2] : null;
+
+                updateDashboard(latestData, previousData);
+                updateHistoryList(allData);
+                updateSolarStats(allData);
+                updateChart(allData);
+
+                elements.lastUpdated.textContent = dateFns.format(new Date(), 'HH:mm:ss');
+
+            } catch (error) {
+                console.error("Erreur lors de la mise à jour:", error);
+                elements.lastUpdated.textContent = "Échec de la synchro";
+            }
+        }
+
+        // --- PARSING DES DONNÉES ---
+        function parseCsvData(csvData) {
+            const lignes = csvData.trim().split('\n').slice(1); // On ignore l'en-tête
+            return lignes.map(ligne => {
+                const valeurs = ligne.split(',');
+                if (valeurs.length < 4) return null;
+                
+                // Utilisation de l'objet global 'dateFns' fourni par la librairie
+                const dataPoint = {
+                    timestamp: dateFns.parse(valeurs[0], 'dd/MM/yyyy HH:mm:ss', new Date()),
+                    voltage: parseFloat(valeurs[1].replace(',', '.')),
+                    temp: parseFloat(valeurs[2].replace(',', '.')),
+                    battery: parseInt(valeurs[3], 10),
+                };
+
+                // Validation robuste des données parsées
+                if (isNaN(dataPoint.voltage) || isNaN(dataPoint.temp) || isNaN(dataPoint.battery) || !dateFns.isValid(dataPoint.timestamp)) {
+                    console.warn("Ligne de données invalide ignorée:", ligne);
+                    return null;
+                }
+                return dataPoint;
+
+            }).filter(Boolean); // Filtre les entrées null (invalides)
+        }
+
+        // --- MISES À JOUR DE L'UI ---
+        function updateDashboard(latest, previous) {
+            elements.temp.textContent = latest.temp.toFixed(1);
+            elements.voltage.textContent = latest.voltage.toFixed(2);
+            elements.battery.textContent = latest.battery;
+
+            // Détermine le statut de la charge solaire
+            if (previous && latest.voltage > previous.voltage + 0.01) {
+                elements.solarStatus.textContent = "En charge";
+                elements.solarStatus.className = "text-2xl font-bold text-emerald-300";
+            } else {
+                elements.solarStatus.textContent = "Stable";
+                elements.solarStatus.className = "text-2xl font-bold text-amber-300";
+            }
+        }
+
+        // AMÉLIORATION: Remplacement du tableau par une liste adaptative
+        function updateHistoryList(allData) {
+            elements.historyContainer.innerHTML = '';
+            const recentData = allData.slice(-50).reverse(); // Affiche les 50 plus récents
+            recentData.forEach(data => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'flex justify-between items-center p-3 rounded-lg hover:bg-sky-500/10';
+                entryDiv.innerHTML = `
+                    <div>
+                        <div class="font-semibold text-white">${data.temp.toFixed(1)}°C / ${data.battery}%</div>
+                        <div class="text-xs text-blue-300">${dateFns.format(data.timestamp, 'HH:mm:ss')}</div>
+                    </div>
+                    <div class="font-mono text-sm text-sky-300">${data.voltage.toFixed(2)}V</div>
+                `;
+                elements.historyContainer.appendChild(entryDiv);
+            });
+        }
+
+        // Calcul de la production solaire sur la journée en cours
+        function updateSolarStats(allData) {
+            let totalProductionMah = 0;
+            const today = new Date();
+
+            for (let i = 1; i < allData.length; i++) {
+                const current = allData[i];
+                const previous = allData[i - 1];
+
+                // On ne traite que les données d'aujourd'hui
+                if (!dateFns.isToday(current.timestamp)) continue;
+
+                // Si le voltage augmente, on considère que le panneau charge
+                if (current.voltage > previous.voltage + 0.01) {
+                    const durationInMs = current.timestamp.getTime() - previous.timestamp.getTime();
+                    const durationInHours = durationInMs / (1000 * 60 * 60);
+                    totalProductionMah += SOLAR_PANEL_CURRENT_MA * durationInHours;
+                }
+            }
+            elements.dailyProduction.textContent = Math.round(totalProductionMah);
+        }
+
+        function updateChart(allData) {
+            // On affiche les 100 derniers points pour garder le graphique lisible
+            const chartData = allData.slice(-100); 
+            
+            if (!mainChart) {
+                const ctx = elements.chartCanvas.getContext('2d');
+                mainChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Température (°C)',
+                                data: chartData.map(d => ({x: d.timestamp, y: d.temp})),
+                                borderColor: 'rgba(252, 165, 165, 0.8)',
+                                backgroundColor: 'rgba(252, 165, 165, 0.1)',
+                                yAxisID: 'y_temp',
+                                tension: 0.4,
+                                fill: true,
+                            },
+                            {
+                                label: 'Batterie (%)',
+                                data: chartData.map(d => ({x: d.timestamp, y: d.battery})),
+                                borderColor: 'rgba(125, 211, 252, 0.8)',
+                                backgroundColor: 'rgba(125, 211, 252, 0.1)',
+                                yAxisID: 'y_battery',
+                                tension: 0.4,
+                                fill: true,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour',
+                                    displayFormats: { hour: 'HH:mm' }
+                                },
+                                ticks: { color: 'rgba(255,255,255,0.7)' },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
+                            },
+                            y_temp: {
+                                position: 'left',
+                                title: { display: true, text: '°C', color: 'rgba(255,255,255,0.7)' },
+                                ticks: { color: 'rgba(255,255,255,0.7)' },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
+                            },
+                            y_battery: {
+                                position: 'right',
+                                min: 0, max: 100,
+                                title: { display: true, text: '%', color: 'rgba(255,255,255,0.7)' },
+                                ticks: { color: 'rgba(255,255,255,0.7)' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: 'rgba(255,255,255,0.9)' } }
+                        }
+                    }
+                });
+            } else {
+                mainChart.data.datasets[0].data = chartData.map(d => ({x: d.timestamp, y: d.temp}));
+                mainChart.data.datasets[1].data = chartData.map(d => ({x: d.timestamp, y: d.battery}));
+                mainChart.update();
+            }
+        }
+
+        // --- DÉMARRAGE ---
+        // CORRECTION: Utilisation de 'load' au lieu de 'DOMContentLoaded' pour s'assurer que toutes les librairies sont chargées.
+        window.addEventListener('load', () => {
+            fetchDataAndRefreshUI(); // Premier chargement
+            setInterval(fetchDataAndRefreshUI, 120000); // Rafraîchir toutes les 2 minutes
+        });
+    </script>
+</body>
+</html>
