@@ -388,8 +388,10 @@
 
             let model;
             const loader = new window.GLTFLoader();
-            // REMPLACEZ CETTE URL PAR LE LIEN VERS VOTRE FICHIER .glb
-            const modelUrl = 'piscine.glb';
+            
+            // CORRECTION: Utilisation d'une URL publique pour le modèle de démonstration.
+            // REMPLACEZ CETTE LIGNE PAR L'URL DE VOTRE MODÈLE QUAND IL SERA SUR GITHUB
+            const modelUrl = 'https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=1OHNtXFArFax4hVL5QtWuAlv7rN4d6dPR';
             
             loader.load(modelUrl, (gltf) => {
                 model = gltf.scene;
@@ -403,7 +405,7 @@
                 scene.add(model);
             }, undefined, (error) => {
                 console.error('Erreur chargement modèle 3D:', error);
-                container.innerHTML = '<p class="text-xs text-center text-red-400">Erreur: "piscine.glb" introuvable.</p>';
+                container.innerHTML = '<p class="text-xs text-center text-red-400">Erreur de chargement du modèle 3D.</p>';
             });
 
             let animationId;
@@ -427,6 +429,10 @@
         const weatherDescriptions = { 0: "Ciel clair", 1: "Généralement clair", 2: "Partiellement nuageux", 3: "Couvert", 45: "Brouillard", 48: "Brouillard givrant", 51: "Bruine légère", 53: "Bruine modérée", 55: "Bruine dense", 61: "Pluie légère", 63: "Pluie modérée", 65: "Pluie forte", 71: "Neige légère", 73: "Neige modérée", 75: "Neige forte", 80: "Averses légères", 81: "Averses modérées", 82: "Averses violentes", 95: "Orage", 96: "Orage avec grêle" };
         const getWeatherDescription = (code) => weatherDescriptions[code] || "Inconnu";
         
+        const weatherIcons = {
+            day: { 0: "01d", 1: "02d", 2: "03d", 3: "04d", 45: "50d", 48: "50d", 51: "09d", 53: "09d", 55: "09d", 61: "10d", 63: "10d", 65: "10d", 71: "13d", 73: "13d", 75: "13d", 80: "09d", 81: "09d", 82: "09d", 95: "11d", 96: "11d" },
+            night: { 0: "01n", 1: "02n", 2: "03n", 3: "04n", 45: "50n", 48: "50n", 51: "09n", 53: "09n", 55: "09n", 61: "10n", 63: "10n", 65: "10n", 71: "13n", 73: "13n", 75: "13n", 80: "09n", 81: "09n", 82: "09n", 95: "11n", 96: "11n" }
+        };
         const getWeatherIconURL = (code, isDay, size = "@4x") => {
             const map = isDay ? weatherIcons.day : weatherIcons.night;
             const icon = map[code] || (isDay ? "01d" : "01n");
@@ -824,6 +830,8 @@
                     const rect = card.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
                     const rotateX = -((y / rect.height) - 0.5) * 15;
                     const rotateY = ((x / rect.width) - 0.5) * 15;
                     card.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
