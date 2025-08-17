@@ -8,32 +8,47 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <!-- Ajout de Three.js et du GLTFLoader pour les modèles 3D -->
+    <!-- MODIFIED: Added three.js library for 3D animation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script type="importmap">
-        { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js" } }
-    </script>
-    <script type="module">
-        import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
-        window.GLTFLoader = GLTFLoader;
-        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/controls/OrbitControls.js';
-        window.OrbitControls = OrbitControls;
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --glow-color: hsl(180, 100%, 50%); }
-        body { font-family: 'Inter', sans-serif; color: #e0e0e0; background-color: #02040a; overflow-x: hidden; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            color: #e0e0e0; 
+            background-color: #02040a; 
+            overflow-x: hidden; 
+        }
         
-        #three-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        /* MODIFIED: Added canvas for particle background */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+        }
+
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            /* MODIFIED: Made gradient semi-transparent to see particles through it */
+            background: radial-gradient(ellipse at bottom, rgba(27, 39, 53, 0.7) 0%, rgba(9, 10, 15, 0.9) 100%);
+        }
         
-        .glass-card { background: rgba(15, 20, 40, 0.4); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; animation: fadeIn 0.8s ease-out forwards; opacity: 0; transform-style: preserve-3d; border-radius: 1.25rem; }
+        .glass-card { background: rgba(15, 20, 40, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; overflow: hidden; animation: fadeIn 0.8s ease-out forwards; opacity: 0; transform-style: preserve-3d; border-radius: 1.25rem; }
         .glass-card.clickable { cursor: pointer; }
         .glass-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.1), transparent 60%); opacity: 0; transition: opacity 0.5s; z-index: 0; }
         .glass-card:hover::before { opacity: 1; }
         .glass-card > * { position: relative; z-index: 1; }
-        .glass-card.clickable:hover { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.25); }
+        .glass-card.clickable:hover, a.glass-card:hover { box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4); border-color: rgba(255, 255, 255, 0.25); }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(40px) rotateX(-15deg); } to { opacity: 1; transform: translateY(0) rotateX(0deg); } }
         .card-1 { animation-delay: 0.1s; } .card-2 { animation-delay: 0.2s; } .card-3 { animation-delay: 0.3s; } .card-4 { animation-delay: 0.4s; } .card-5 { animation-delay: 0.5s; } .card-6 { animation-delay: 0.6s; } .card-7 { animation-delay: 0.7s; }
@@ -70,13 +85,11 @@
         
         .sun-pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px var(--glow-color)); } 50% { transform: scale(1.1); filter: drop-shadow(0 0 20px var(--glow-color)); } }
-
-        #pool-3d-container { min-height: 180px; position: relative; }
-        #pool-3d-modal-container { width: 100%; height: 70vh; }
     </style>
 </head>
 <body class="antialiased">
-    <canvas id="three-canvas"></canvas>
+    <canvas id="particle-canvas"></canvas>
+    <div class="background-container"></div>
 
     <div class="container mx-auto p-4 md:p-8 relative z-10">
         <header class="text-center mb-10">
@@ -141,12 +154,18 @@
                 <p id="solar-info" class="text-sm opacity-60 mt-1">--</p>
             </div>
             
-            <!-- Piscine 3D -->
-            <div class="glass-card card-5 rounded-2xl p-6 flex flex-col justify-between clickable" data-modal-target="pool3d">
+            <a href="https://lumalabs.ai/capture/2b18c6ba-01ba-4d56-a6dc-fff9ded22936" target="_blank" rel="noopener noreferrer" class="glass-card card-5 rounded-2xl p-6 flex flex-col justify-between no-underline text-white">
                 <h2 class="text-xl font-semibold mb-4 text-center opacity-90">Piscine 3D</h2>
-                <div id="pool-3d-container" class="flex-grow"></div>
-                <p class="text-sm opacity-60 mt-2 text-center">Cliquez pour agrandir</p>
-            </div>
+                <div class="flex-grow flex items-center justify-center">
+                    <div class="text-center">
+                        <i data-lucide="box" class="w-16 h-16 mx-auto text-white/30"></i>
+                        <p class="text-sm opacity-60 mt-2">Voir le modèle 3D</p>
+                    </div>
+                </div>
+                <p class="text-sm opacity-60 mt-2 text-center flex items-center justify-center gap-2">
+                    Ouvrir dans un nouvel onglet <i data-lucide="external-link" class="w-4 h-4"></i>
+                </p>
+            </a>
         </main>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -255,7 +274,6 @@
         const aiSettingsModal = document.getElementById('ai-settings-modal');
         const aiSettingsButton = document.getElementById('ai-settings-button');
         const aiSettingsClose = document.getElementById('ai-settings-close');
-        const pool3DContainer = document.getElementById('pool-3d-container');
 
         // --- DATA & STATE ---
         let historyChart = null;
@@ -266,164 +284,108 @@
         let latestSolarData = null;
         let latestWeatherData = null;
 
-        // --- 3D SCENES ---
-        let bgScene, bgCamera, bgRenderer, bgParticles;
-        const bgParticleVelocities = [];
-        let bgWeatherState = 'clear';
-        let cleanupPool3DModal = null;
+        // --- NEW: 3D PARTICLE BACKGROUND ---
+        let scene, camera, renderer, particles;
+        let particleAnimation = { speed: 0.005, velocity: 0.0, color1: new THREE.Color(0xffffff), color2: new THREE.Color(0xffffff) };
 
-        function initBackground3D() {
-            try {
-                const canvas = document.getElementById('three-canvas');
-                bgScene = new THREE.Scene();
-                bgCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                bgCamera.position.z = 50;
-                bgRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
-                bgRenderer.setSize(window.innerWidth, window.innerHeight);
+        function initParticleBackground() {
+            const canvas = document.getElementById('particle-canvas');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
 
-                const particleCount = 5000;
-                const positions = new Float32Array(particleCount * 3);
-                const colors = new Float32Array(particleCount * 3);
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
 
-                for (let i = 0; i < particleCount; i++) {
-                    positions[i * 3] = (Math.random() - 0.5) * 200;
-                    positions[i * 3 + 1] = (Math.random() - 0.5) * 200;
-                    positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
-                    bgParticleVelocities.push({ x: (Math.random() - 0.5) * 0.02, y: (Math.random() * 0.05 + 0.01), z: (Math.random() - 0.5) * 0.02 });
-                }
+            const particleCount = 5000;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
 
-                const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-                const material = new THREE.PointsMaterial({ size: 0.3, vertexColors: true, sizeAttenuation: true, transparent: true, opacity: 0.8 });
-                bgParticles = new THREE.Points(geometry, material);
-                bgScene.add(bgParticles);
-
-                window.addEventListener('resize', onWindowResize, false);
-                animateBackground3D();
-            } catch (e) {
-                console.error("Erreur initialisation 3D arrière-plan:", e);
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                positions[i3] = (Math.random() - 0.5) * 10;
+                positions[i3 + 1] = (Math.random() - 0.5) * 10;
+                positions[i3 + 2] = (Math.random() - 0.5) * 10;
+                
+                const mixedColor = particleAnimation.color1.clone().lerp(particleAnimation.color2, Math.random());
+                colors[i3] = mixedColor.r;
+                colors[i3 + 1] = mixedColor.g;
+                colors[i3 + 2] = mixedColor.b;
             }
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.02,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            window.addEventListener('resize', onWindowResize, false);
         }
 
         function onWindowResize() {
-            if (bgCamera && bgRenderer) {
-                bgCamera.aspect = window.innerWidth / window.innerHeight;
-                bgCamera.updateProjectionMatrix();
-                bgRenderer.setSize(window.innerWidth, window.innerHeight);
-            }
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
-        
-        function updatePointCloudForWeather(weatherCode) {
-            if (!bgParticles) return;
-            let newState = 'clear';
-            if (weatherCode >= 3 && weatherCode <= 48) newState = 'cloudy';
-            else if (weatherCode >= 51 && weatherCode <= 82) newState = 'rain';
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
             
-            if (newState !== bgWeatherState) {
-                bgWeatherState = newState;
-                const colors = bgParticles.geometry.attributes.color.array;
-                const color = new THREE.Color();
-                for (let i = 0; i < bgParticleVelocities.length; i++) {
-                    if (bgWeatherState === 'clear') {
-                        color.setHSL(Math.random() * 0.1 + 0.5, 0.8, 0.7);
-                        bgParticleVelocities[i] = { x: (Math.random() - 0.5) * 0.02, y: (Math.random() - 0.5) * 0.02, z: (Math.random() - 0.5) * 0.02 };
-                    } else if (bgWeatherState === 'cloudy') {
-                        color.setHSL(0, 0, Math.random() * 0.3 + 0.5);
-                        bgParticleVelocities[i] = { x: (Math.random() - 0.5) * 0.05, y: (Math.random() - 0.5) * 0.01, z: 0 };
-                    } else if (bgWeatherState === 'rain') {
-                        color.setHSL(0.6, 0.9, 0.6);
-                        bgParticleVelocities[i] = { x: 0, y: -Math.random() * 0.5 - 0.2, z: 0 };
+            if(particles) {
+                particles.rotation.y += particleAnimation.speed;
+                
+                const positions = particles.geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 3) {
+                    positions[i + 1] -= particleAnimation.velocity;
+                    if (positions[i + 1] < -5) {
+                        positions[i + 1] = 5;
                     }
-                    colors[i * 3] = color.r; colors[i * 3 + 1] = color.g; colors[i * 3 + 2] = color.b;
                 }
-                bgParticles.geometry.attributes.color.needsUpdate = true;
+                particles.geometry.attributes.position.needsUpdate = true;
             }
+
+            renderer.render(scene, camera);
         }
 
-        function animateBackground3D() {
-            requestAnimationFrame(animateBackground3D);
-            if (!bgParticles) return;
-            const positions = bgParticles.geometry.attributes.position.array;
-            for (let i = 0; i < bgParticleVelocities.length; i++) {
-                positions[i * 3] += bgParticleVelocities[i].x;
-                positions[i * 3 + 1] += bgParticleVelocities[i].y;
-                positions[i * 3 + 2] += bgParticleVelocities[i].z;
-                if (bgWeatherState === 'rain') { if (positions[i * 3 + 1] < -100) positions[i * 3 + 1] = 100; }
-                else { if (positions[i * 3 + 1] > 100) positions[i * 3 + 1] = -100; }
-                if (positions[i * 3] > 100) positions[i * 3] = -100;
-                if (positions[i * 3] < -100) positions[i * 3] = 100;
+        function updateParticleSystem(weatherCode) {
+            let newConfig = { speed: 0.0005, velocity: 0, color1: new THREE.Color(0xffffff), color2: new THREE.Color(0xffffff) };
+
+            if (weatherCode <= 1) { // Clear sky
+                newConfig = { speed: 0.0008, velocity: 0, color1: new THREE.Color(0xffde59), color2: new THREE.Color(0xffffff) };
+            } else if (weatherCode <= 3) { // Cloudy
+                newConfig = { speed: 0.0004, velocity: 0, color1: new THREE.Color(0xaaaaaa), color2: new THREE.Color(0xffffff) };
+            } else if (weatherCode >= 51 && weatherCode <= 65) { // Rain
+                newConfig = { speed: 0.0006, velocity: 0.01, color1: new THREE.Color(0x0077ff), color2: new THREE.Color(0x99ccff) };
+            } else if (weatherCode >= 95) { // Thunderstorm
+                 newConfig = { speed: 0.002, velocity: 0.015, color1: new THREE.Color(0x8800ff), color2: new THREE.Color(0xaaaaaa) };
+            } else if (weatherCode >= 71 && weatherCode <= 75) { // Snow
+                newConfig = { speed: 0.0002, velocity: 0.005, color1: new THREE.Color(0xffffff), color2: new THREE.Color(0xdddddd) };
+            } else if (weatherCode >= 45 && weatherCode <= 48) { // Fog
+                newConfig = { speed: 0.0001, velocity: 0, color1: new THREE.Color(0xbbbbbb), color2: new THREE.Color(0x999999) };
             }
-            bgParticles.geometry.attributes.position.needsUpdate = true;
-            bgParticles.rotation.y += 0.0005;
-            bgRenderer.render(bgScene, bgCamera);
+            
+            particleAnimation = newConfig;
+
+            // Update colors
+            const colors = particles.geometry.attributes.color.array;
+            for (let i = 0; i < colors.length; i += 3) {
+                const mixedColor = particleAnimation.color1.clone().lerp(particleAnimation.color2, Math.random());
+                colors[i] = mixedColor.r;
+                colors[i+1] = mixedColor.g;
+                colors[i+2] = mixedColor.b;
+            }
+            particles.geometry.attributes.color.needsUpdate = true;
         }
 
-        function initPool3D(container, isModal = false) {
-            if (!container) return;
-            while (container.firstChild) {
-                container.removeChild(container.firstChild);
-            }
-
-            const scene = new THREE.Scene();
-            const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(isModal ? 3 : 5, isModal ? 3 : 5, isModal ? 3 : 5);
-            
-            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            container.appendChild(renderer.domElement);
-
-            const controls = new window.OrbitControls(camera, renderer.domElement);
-            controls.enableZoom = isModal;
-            controls.enablePan = isModal;
-            controls.autoRotate = !isModal;
-            controls.autoRotateSpeed = 1.0;
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-            directionalLight.position.set(5, 10, 7.5);
-            scene.add(directionalLight);
-
-            let model;
-            const loader = new window.GLTFLoader();
-            
-            // CORRECTION: Utilisation d'une URL publique pour le modèle de démonstration.
-            // REMPLACEZ CETTE LIGNE PAR L'URL DE VOTRE MODÈLE QUAND IL SERA SUR GITHUB
-            const modelUrl = 'https://cors-anywhere.herokuapp.com/https://drive.google.com/uc?export=download&id=1OHNtXFArFax4hVL5QtWuAlv7rN4d6dPR';
-            
-            loader.load(modelUrl, (gltf) => {
-                model = gltf.scene;
-                const box = new THREE.Box3().setFromObject(model);
-                const center = box.getCenter(new THREE.Vector3());
-                model.position.sub(center);
-                const size = box.getSize(new THREE.Vector3());
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const scale = (isModal ? 4 : 2) / maxDim;
-                model.scale.set(scale, scale, scale);
-                scene.add(model);
-            }, undefined, (error) => {
-                console.error('Erreur chargement modèle 3D:', error);
-                container.innerHTML = '<p class="text-xs text-center text-red-400">Erreur de chargement du modèle 3D.</p>';
-            });
-
-            let animationId;
-            function animate() {
-                animationId = requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            }
-            animate();
-
-            return () => {
-                cancelAnimationFrame(animationId);
-                renderer.dispose();
-                if (container && renderer.domElement && renderer.domElement.parentNode === container) {
-                    container.removeChild(renderer.domElement);
-                }
-            };
-        }
 
         // --- HELPERS ---
         const weatherDescriptions = { 0: "Ciel clair", 1: "Généralement clair", 2: "Partiellement nuageux", 3: "Couvert", 45: "Brouillard", 48: "Brouillard givrant", 51: "Bruine légère", 53: "Bruine modérée", 55: "Bruine dense", 61: "Pluie légère", 63: "Pluie modérée", 65: "Pluie forte", 71: "Neige légère", 73: "Neige modérée", 75: "Neige forte", 80: "Averses légères", 81: "Averses modérées", 82: "Averses violentes", 95: "Orage", 96: "Orage avec grêle" };
@@ -544,8 +506,10 @@
 
             updateSolarStatus(latest);
             createOrUpdateChart(solarData);
-            updatePointCloudForWeather(weatherData.current.weather_code);
             previousDataPoint = latest;
+            
+            // MODIFIED: Update particle system with new weather data
+            updateParticleSystem(weatherData.current.weather_code);
         };
         
         const updateSolarStatus = (currentData) => {
@@ -625,7 +589,6 @@
                 case 'battery': title = 'Analyse de la Batterie'; contentHTML = generateBatteryDetailsHTML(latestSolarData); break;
                 case 'temperature': title = 'Analyse des Températures'; contentHTML = generateTempDetailsHTML(latestSolarData[latestSolarData.length - 1], latestWeatherData.current); break;
                 case 'solar': title = 'Détails de l\'État Solaire'; contentHTML = generateSolarDetailsHTML(latestSolarData[latestSolarData.length - 1]); break;
-                case 'pool3d': title = 'Visualisation 3D de la Piscine'; contentHTML = '<div id="pool-3d-modal-container"></div>'; break;
             }
 
             detailsModalTitle.textContent = title;
@@ -636,10 +599,6 @@
             
             setTimeout(() => {
                 if (type === 'battery' || type === 'temperature') { renderModalChart(type); }
-                if (type === 'pool3d') {
-                    const modalContainer = document.getElementById('pool-3d-modal-container');
-                    if (modalContainer) { cleanupPool3DModal = initPool3D(modalContainer, true); }
-                }
             }, 100);
         };
         
@@ -707,10 +666,10 @@
             return `
                 <div class="space-y-4">
                      <div class="bg-white/5 p-4 rounded-lg text-center">
-                        <p class="text-3xl font-bold text-cyan-300">${statusText}</p>
-                        <p class="opacity-80 mt-1">État actuel</p>
-                    </div>
-                    <p class="opacity-90 leading-relaxed">${explanation}</p>
+                         <p class="text-3xl font-bold text-cyan-300">${statusText}</p>
+                         <p class="opacity-80 mt-1">État actuel</p>
+                     </div>
+                     <p class="opacity-90 leading-relaxed">${explanation}</p>
                 </div>`;
         };
 
@@ -770,10 +729,11 @@
         };
 
         const main = async () => {
-            initBackground3D();
-            initPool3D(pool3DContainer, false);
-            
             if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+
+            // MODIFIED: Initialize and start the particle animation
+            initParticleBackground();
+            animateParticles();
 
             if (!geminiApiKey || !userName) apiKeyModal.classList.add('active');
             
@@ -794,12 +754,10 @@
             
             detailsModalClose.addEventListener('click', () => {
                 detailsModal.classList.remove('active');
-                if (cleanupPool3DModal) { cleanupPool3DModal(); cleanupPool3DModal = null; }
             });
             detailsModal.addEventListener('click', (e) => { 
                 if (e.target === detailsModal) {
                     detailsModal.classList.remove('active');
-                    if (cleanupPool3DModal) { cleanupPool3DModal(); cleanupPool3DModal = null; }
                 }
             });
 
@@ -825,7 +783,7 @@
                 if(latestSolarData && latestWeatherData) getAIAdvice(latestSolarData, latestWeatherData);
             });
 
-            document.querySelectorAll('.glass-card.clickable').forEach(card => {
+            document.querySelectorAll('.glass-card.clickable, a.glass-card').forEach(card => {
                 card.addEventListener('mousemove', (e) => {
                     const rect = card.getBoundingClientRect();
                     const x = e.clientX - rect.left;
